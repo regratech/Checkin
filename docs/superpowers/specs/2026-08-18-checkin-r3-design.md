@@ -268,6 +268,9 @@ Guru. Não `pessoas_preenchidas`. Motivo: `vagas` é estável desde o instante d
 compra, enquanto a contagem de preenchidos muda durante a conversa e faria as
 linhas pularem de aba enquanto o titular digita.
 
+As abas de 1 a 3 são `vagas = n` exatos; a aba `4+` é `vagas >= 4`, para que
+nenhuma inscrição fique sem visão caso o Guru passe a vender lotes maiores.
+
 **Geral** — tabela consolidada, uma linha por pessoa, sem agrupamento:
 
     Código · Nome · Email · Telefone · Papel · Crachá · Cargo · Buffet ·
