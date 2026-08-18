@@ -45,6 +45,7 @@ disputa com `email_insc` o papel de identidade.
 | Interface | **Chat**, uma pergunta por vez, mantendo a Lara. |
 | Revisão de dado pré-existente | Só o titular. Acompanhantes são coleta em branco. |
 | Pessoa repetida entre eventos | Liga em silêncio à ficha existente; o dado válido do evento é o digitado agora. |
+| Chave de identidade | `email + nome normalizado`. Email sozinho funde pessoas — mais da metade dos acompanhantes reusa o email do titular. |
 | Filtro de grupo | Abas por `vagas` (o que foi comprado), não por preenchidos. |
 | Stack | Projeto novo, Next.js 16 + Supabase + Tailwind + zod + vitest. Migrations numeradas, aplicadas à mão pelo SQL Editor. Nomes em português. |
 
@@ -83,11 +84,25 @@ isolamento entre eventos.
 
 `prefixo_codigo` (ex.: `ENG26`) alimenta o código legível das inscrições.
 
-**`pessoas`** — a espinha de identidade, **global, fora do evento**. Chave é o
-email normalizado (minúsculo, sem espaços nas pontas). Responde à pergunta
-"mesmo cadastro ou novo": achou o email, liga; não achou, cria.
+**`pessoas`** — a espinha de identidade, **global, fora do evento**.
 
-    id, email (único, normalizado), nome_recente, criado_em, atualizado_em
+    id, email (normalizado), nome_chave (normalizado), nome_recente,
+    criado_em, atualizado_em
+    único (email, nome_chave)
+
+A chave é **o par email + nome normalizado**, não o email sozinho. Motivo, medido
+na planilha do último evento: em 7 dos 13 grupos o acompanhante foi cadastrado
+com o email do titular (Leonardo Guerrieri sob `laguerryeventos@gmail.com`,
+Marciane Rodrigues sob `reginamorais@hotmail.com`, e mais cinco). Email único
+fundiria dois seres humanos numa ficha só. O telefone não resolve: Marciane,
+Roberta e Ligia também repetem o telefone do titular.
+
+Normalização: email em minúsculas sem espaços nas pontas; `nome_chave` sem
+acentos, minúsculo, espaços colapsados.
+
+O custo assumido é o oposto: "Regina De Morais Pereira" num evento e "Regina
+Morais" no outro geram duas fichas. **Duplicar é reversível; fundir dois humanos
+não é** — o desenho erra para o lado seguro.
 
 `nome_recente` existe só para busca e telas de histórico. **Não é fonte de
 verdade** — o nome que vale em cada evento está em `participantes`.
@@ -173,7 +188,63 @@ o mesmo evento não duplica inscrição.
 `pessoas_preenchidas` é **contado do banco**, nunca digitado. É a diferença
 central para os checkboxes de hoje, que dependem de alguém marcar certo.
 
-### 3.4 Fora do escopo v1
+### 3.4 De-para com a planilha arrumada do último evento
+
+A planilha que a operação monta à mão depois de cada evento já tem o formato
+correto — uma linha por participante, grupos em sequência, dados do buffet
+repetidos em cada linha do grupo. É exatamente o que `vw_participantes` produz
+pelo `join`. O sistema automatiza um trabalho manual que hoje existe, não muda
+o formato de saída.
+
+| Coluna da planilha | Destino | Escopo |
+|---|---|---|
+| `id cliente` | `codigo` + `ordem`, derivado | — |
+| `Email Informado` | `inscricoes.email_compra` | inscrição |
+| `Inscrito Nome` | `participantes.nome` | participante |
+| `Inscrito Email` | `participantes.email` | participante |
+| `Inscrito Tel` | `participantes.telefone` | participante |
+| `Participante Aniversario` | `participantes.data_nascimento` | participante |
+| `Participante Cracha` | `participantes.nome_cracha` | participante |
+| `Participante Cargo` | pergunta · `selecao_unica` | participante |
+| `Nome Buffet` | `inscricoes.empresa_nome` | inscrição |
+| `Cidade Buffet` | `inscricoes.empresa_cidade` | inscrição |
+| `Instagram Buffet` | `inscricoes.empresa_instagram` | inscrição |
+| `Tempo Buffet` | pergunta · `numero` (anos) | inscrição |
+| `Media Publico` | pergunta · `selecao_unica` | inscrição |
+| `Pessoas Atend Evento` | pergunta · `numero` | inscrição |
+| `Faz +1 Evento Dia` | pergunta · `sim_nao` | inscrição |
+| `Tipos Eventos` | pergunta · `selecao_multipla` | inscrição |
+| `Tipos Servico` | pergunta · `selecao_multipla` | inscrição |
+| `Primeiro Atend` … `Montagem Mesa` (7 colunas) | perguntas · `nota_estrela` 0–5 | inscrição |
+| `Expectativa` | pergunta · `texto_longo` | inscrição |
+
+Os três `Inscrito *` estão mal rotulados na planilha: contêm o dado do
+**participante**, não do titular — a linha `laguerry_p2` traz "Leonardo
+Guerrieri" em `Inscrito Nome`. É resíduo do modelo achatado. No modelo novo
+`participantes.nome` e `inscricoes.nome_compra` são campos distintos e
+nomeados como tal.
+
+### 3.5 Sujeira que as perguntas tipadas eliminam
+
+Amostras reais do último evento, todas causadas por coleta em texto livre:
+
+- **Aniversário** — `5101978`, `25091980`, `21/04/1973`, `28 071964`,
+  `24021996`, `00/00/0000`. Seis formatos numa coluna. Tipo `data` com máscara.
+- **Tempo de buffet** — `12 anos`, `5 Anos`, `Aproximadamente 4 anos`. Tipo
+  `numero`, para ordenar e segmentar por maturidade.
+- **Pessoas atendidas por evento** — `300 pss`, `500`, `15000`. Tipo `numero`;
+  o outlier fica visível em vez de passar batido.
+- **Cargo** — o roteiro atual pergunta em voz diferente para titular e
+  acompanhante, então cada papel virou duas strings ("Eu que planejo, organizo,
+  coordeno e faço a comida." / "Planeja, organiza, coordena e faz a comida.").
+  Quatro papéis reais viraram oito valores e o agrupamento por cargo é
+  impossível. Solução: `opcoes` guarda `{chave, rotulo_titular,
+  rotulo_acompanhante}` — um valor filtrável, dois textos de exibição.
+- **`Tipos Eventos` / `Tipos Servico`** — hoje string com vírgulas, o que impede
+  contar quantos atendem casamento. Como `selecao_multipla` em jsonb, viram
+  agregação.
+
+### 3.6 Fora do escopo v1
 
 - **Tabela `empresas` global.** Um buffet em 3 eventos gera 3 valores de
   `empresa_nome`. O histórico que importa (a pessoa) já existe via `pessoas`, e
@@ -318,8 +389,10 @@ lista de crachás e a lista de presença que a Lara promete na abertura.
   batem com as perguntas ativas.
 - `respostas` recusa escopo errado (participante preenchido em pergunta de
   inscrição e vice-versa).
-- Dedup de `pessoas`: emails com maiúscula ou espaço nas pontas caem na mesma
-  ficha.
+- Dedup de `pessoas`: mesmo email com maiúscula ou espaço nas pontas e o mesmo
+  nome caem na mesma ficha.
+- **Não-fusão**: dois nomes diferentes sob o mesmo email geram duas pessoas
+  (caso Janaína / Leonardo em `laguerryeventos@gmail.com`).
 - As abas de tamanho agrupam por `vagas` e não se movem quando
   `pessoas_preenchidas` muda no meio de um check-in.
 - Retomada: interromper no passo k e voltar restaura exatamente o passo k.
