@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { expandirRoteiro, indiceDoPasso } from './roteiro'
+import { expandirRoteiro, indiceDoPasso, type Passo } from './roteiro'
 import type { Pergunta } from '@/lib/supabase/tipos'
 
 function pergunta(p: Partial<Pergunta>): Pergunta {
@@ -11,7 +11,8 @@ function pergunta(p: Partial<Pergunta>): Pergunta {
   }
 }
 
-const ordemDe = (p: { alvo: { tipo: string } }) => (p.alvo as { ordem: number }).ordem
+/** -1 para passo de inscrição, que não pertence a ninguém. */
+const ordemDe = (p: Passo): number => (p.alvo.tipo === 'participante' ? p.alvo.ordem : -1)
 
 describe('expandirRoteiro', () => {
   it('uma vaga gera um bloco de participante', () => {

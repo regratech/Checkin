@@ -36,12 +36,20 @@ export default async function PaginaEvento({ params }: PageProps<'/admin/[evento
         {inscricoes ?? 0} {inscricoes === 1 ? 'inscrição' : 'inscrições'}
       </p>
 
-      <Link
-        href={`/admin/${slug}/inscricoes/nova`}
-        className="self-start rounded bg-neutral-900 px-4 py-2 text-white"
-      >
-        Nova inscrição
-      </Link>
+      <div className="flex flex-wrap gap-3">
+        <Link
+          href={`/admin/${slug}/inscricoes/nova`}
+          className="rounded bg-neutral-900 px-4 py-2 text-white"
+        >
+          Nova inscrição
+        </Link>
+        <Link href={`/admin/${slug}/participantes`} className="rounded border px-4 py-2">
+          Participantes
+        </Link>
+        <Link href={`/admin/${slug}/roteiro`} className="rounded border px-4 py-2">
+          Roteiro
+        </Link>
+      </div>
     </div>
   )
 }

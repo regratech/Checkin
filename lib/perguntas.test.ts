@@ -43,7 +43,8 @@ describe('esquemaPergunta', () => {
     // Checkbox desmarcado nao aparece no FormData. Um union com
     // z.undefined() NAO torna a chave opcional no Zod 4 — sem `.optional()`
     // toda pergunta nao obrigatoria seria recusada.
-    const { obrigatoria: _ignorado, ...semCheckbox } = valido
+    const semCheckbox: Record<string, string> = { ...valido }
+    delete semCheckbox.obrigatoria
     const r = esquemaPergunta.safeParse(semCheckbox)
     expect(r.success).toBe(true)
     expect(r.success && r.data.obrigatoria).toBe(false)
