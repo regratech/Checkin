@@ -27,7 +27,9 @@ export function prefixoPadrao(nome: string, ano: number): string {
 type ClienteSupabase = {
   from: (tabela: string) => {
     insert: (linha: Record<string, unknown>) => {
-      select: () => { single: () => Promise<{ data: unknown; error: unknown }> }
+      // PromiseLike, nao Promise: o construtor de consulta do Supabase e
+      // thenable mas nao tem catch/finally, entao nao satisfaz Promise.
+      select: () => { single: () => PromiseLike<{ data: unknown; error: unknown }> }
     }
   }
 }
