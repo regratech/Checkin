@@ -396,3 +396,26 @@ lista de crachás e a lista de presença que a Lara promete na abertura.
 - As abas de tamanho agrupam por `vagas` e não se movem quando
   `pessoas_preenchidas` muda no meio de um check-in.
 - Retomada: interromper no passo k e voltar restaura exatamente o passo k.
+
+---
+
+## Adendo (2026-08-19): como o Guru chega hoje
+
+Confirmado pelo operador: os dados do Guru **não vão direto ao Typebot**. Existe
+um passo intermediário — o Guru alimenta uma **planilha do Google**, e o Typebot
+consulta essa planilha (`Get data from sheet`) para achar a inscrição pelo email.
+
+Isso muda o desenho da Fatia D em um ponto prático: pode já existir uma
+automação (Zapier, Make, ou o próprio webhook do Guru) escrevendo na planilha.
+Se existir, o caminho mais curto não é configurar um webhook do zero — é
+**reapontar a automação existente** para o endpoint do sistema, ou, na
+transição, importar a própria planilha pelo caminho CSV que a `sincronizacoes`
+já prevê.
+
+A investigar antes de escrever o plano da Fatia D:
+
+1. O que escreve na planilha hoje — webhook nativo do Guru, Zapier, Make, ou
+   digitação manual?
+2. Se for uma automação, ela aceita trocar a URL de destino?
+3. A planilha tem colunas que o Guru manda mas que o Typebot não usa? Elas
+   podem ser úteis (valor pago, data da compra, status do pagamento).
