@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache'
 import { criarClienteAdmin } from '@/lib/supabase/servidor'
 import { carregarPorToken, podeAvancar, proximoIndice } from '@/lib/checkin'
+import { ehPassoComposto, validarComposto, type ChaveComposta } from '@/lib/composto'
+import { resolverPessoa } from '@/lib/inscricoes'
 import type { Passo } from '@/lib/roteiro'
 
 export type RespostaAcao = { ok: true } | { ok: false; erro: string }
@@ -73,10 +75,47 @@ export async function responder(
     return { ok: false, erro: 'Esse passo já foi respondido. Recarregue a página.' }
   }
 
-  const permitido = podeAvancar(passo, valor)
-  if (!permitido.ok) return permitido
+  // Passos compostos pedem varios campos de uma vez e tem validacao propria.
+  if (ehPassoComposto(passo)) {
+    const bruto = (typeof valor === 'object' && valor !== null ? valor : {}) as Record<
+      string,
+      unknown
+    >
+    const r = validarComposto(passo.fixo as ChaveComposta, bruto)
+    if (!r.ok) return { ok: false, erro: r.erro }
 
-  await gravarValor(cliente, estado.inscricao.id, passo, valor)
+    if (passo.fixo === 'buffet') {
+      await cliente.from('inscricoes').update(r.valores).eq('id', estado.inscricao.id)
+    } else if (passo.alvo.tipo === 'participante') {
+      const ordem = passo.alvo.ordem
+      const existente = estado.participantes.find((x) => x.ordem === ordem)
+
+      if (existente) {
+        await cliente.from('participantes').update(r.valores).eq('id', existente.id)
+      } else {
+        // O acompanhante ainda nao tem linha: so o titular nasce com a
+        // inscricao. A pessoa e resolvida pelo par email + nome — por isso
+        // este passo pede os dois juntos, e nao um de cada vez.
+        const pessoaId = await resolverPessoa(
+          cliente,
+          String(r.valores.email),
+          String(r.valores.nome),
+        )
+        await cliente.from('participantes').insert({
+          ...r.valores,
+          inscricao_id: estado.inscricao.id,
+          pessoa_id: pessoaId,
+          ordem,
+          titular: false,
+        })
+      }
+    }
+  } else {
+    const permitido = podeAvancar(passo, valor)
+    if (!permitido.ok) return permitido
+
+    await gravarValor(cliente, estado.inscricao.id, passo, valor)
+  }
 
   const seguinte = estado.passos[proximoIndice(estado.passos, estado.indice)]
   await cliente

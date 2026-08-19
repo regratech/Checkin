@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { chaveDeResposta, proximoIndice, podeAvancar } from './checkin'
+import {
+  chaveDeResposta,
+  proximoIndice,
+  podeAvancar,
+  respostasDoNucleo,
+} from './checkin'
 import { expandirRoteiro } from './roteiro'
 import type { Pergunta } from '@/lib/supabase/tipos'
 
@@ -60,31 +65,45 @@ describe('podeAvancar', () => {
     expect(podeAvancar(expandirRoteiro([], 1)[0], undefined)).toEqual({ ok: true })
   })
 
-  it('nome do participante e sempre obrigatorio', () => {
-    // Os campos do nucleo nao sao configuraveis: sem nome, o cracha nao sai.
-    const passoNome = expandirRoteiro([], 2).find((p) => p.chave === 'p2.nome')!
-    expect(podeAvancar(passoNome, '').ok).toBe(false)
-    expect(podeAvancar(passoNome, 'Leonardo Guerrieri')).toEqual({ ok: true })
+  it('passo composto passa direto: quem valida e validarComposto', () => {
+    // Os campos do acompanhante viram um bloco so, porque a linha em
+    // `participantes` precisa de nome e email ao mesmo tempo para nascer.
+    const bloco = expandirRoteiro([], 2).find((p) => p.chave === 'p2.dados_participante')!
+    expect(bloco).toBeDefined()
+    expect(podeAvancar(bloco, undefined)).toEqual({ ok: true })
+  })
+})
+
+describe('respostasDoNucleo', () => {
+  const participantes = [
+    {
+      id: 'a', inscricao_id: 'i1', pessoa_id: 'x', ordem: 1, titular: true,
+      nome: 'Janaína', email: 'j@g.com', telefone: '51998128616',
+      data_nascimento: '1978-10-05', nome_cracha: 'Janaina', cargo: null,
+    },
+    {
+      id: 'b', inscricao_id: 'i1', pessoa_id: 'y', ordem: 2, titular: false,
+      nome: 'Leonardo', email: 'l@g.com', telefone: null,
+      data_nascimento: null, nome_cracha: null, cargo: null,
+    },
+  ]
+
+  it('chaveia cada campo do nucleo pelo passo correspondente', () => {
+    // A revisao lia so `respostas`, que traz apenas perguntas. Sem isto os
+    // campos do nucleo apareciam "em branco" mesmo estando gravados.
+    const r = respostasDoNucleo(participantes)
+    expect(r['p1.nome']).toBe('Janaína')
+    expect(r['p2.email']).toBe('l@g.com')
+    expect(r['p1.data_nascimento']).toBe('1978-10-05')
   })
 
-  it('email do participante e validado como email', () => {
-    const passoEmail = expandirRoteiro([], 2).find((p) => p.chave === 'p2.email')!
-    expect(podeAvancar(passoEmail, 'nao-e-email').ok).toBe(false)
-    expect(podeAvancar(passoEmail, 'leo@guerry.com')).toEqual({ ok: true })
+  it('omite campo nulo em vez de gravar a palavra null', () => {
+    const r = respostasDoNucleo(participantes)
+    expect(r['p2.telefone']).toBeUndefined()
+    expect(r['p2.nome_cracha']).toBeUndefined()
   })
 
-  it('telefone e aniversario do participante sao opcionais', () => {
-    // Na planilha real varios acompanhantes vieram sem um ou outro. Travar
-    // a conversa por isso faria o titular abandonar o check-in.
-    const passos = expandirRoteiro([], 2)
-    expect(podeAvancar(passos.find((p) => p.chave === 'p2.telefone')!, '')).toEqual({ ok: true })
-    expect(podeAvancar(passos.find((p) => p.chave === 'p2.data_nascimento')!, '')).toEqual({
-      ok: true,
-    })
-  })
-
-  it('aniversario preenchido ainda precisa ser data valida', () => {
-    const passo = expandirRoteiro([], 2).find((p) => p.chave === 'p2.data_nascimento')!
-    expect(podeAvancar(passo, '00/00/0000').ok).toBe(false)
+  it('lista vazia devolve objeto vazio', () => {
+    expect(respostasDoNucleo([])).toEqual({})
   })
 })

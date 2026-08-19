@@ -6,6 +6,7 @@ import { concluir, voltarPara } from './acoes'
 import { lerOpcoes, rotuloDaOpcao } from '@/lib/opcoes'
 import type { Passo } from '@/lib/roteiro'
 import type { EstadoSerializado } from '@/lib/checkin'
+import { CAMPOS_COMPOSTOS, ehPassoComposto, type ChaveComposta } from '@/lib/composto'
 
 const NOME_FIXO: Record<string, string> = {
   nome: 'Nome',
@@ -47,15 +48,45 @@ export function Revisao({ token, estado }: { token: string; estado: EstadoSerial
   const [erro, setErro] = useState('')
   const [ocupado, iniciarTransicao] = useTransition()
 
-  // Só os passos que guardam alguma resposta — abertura e revisão não entram.
-  const revisaveis = estado.passos.filter(
-    (p) => p.pergunta !== undefined || NOME_FIXO[p.fixo ?? ''] !== undefined,
-  )
+  // Cada linha da revisao: de onde vem o rotulo, o valor e para onde o
+  // botao Corrigir manda a conversa de volta.
+  interface Linha {
+    id: string
+    rotulo: string
+    texto: string
+    chaveDoPasso: string
+  }
 
-  const grupos = new Map<string, Passo[]>()
-  for (const p of revisaveis) {
+  const grupos = new Map<string, Linha[]>()
+  const juntar = (titulo: string, linha: Linha) =>
+    grupos.set(titulo, [...(grupos.get(titulo) ?? []), linha])
+
+  for (const p of estado.passos) {
     const titulo = p.alvo.tipo === 'participante' ? `Pessoa ${p.alvo.ordem}` : 'Buffet'
-    grupos.set(titulo, [...(grupos.get(titulo) ?? []), p])
+
+    // Passos compostos viram varias linhas — sem isto, os dados do titular
+    // e do buffet nao apareciam na revisao.
+    if (ehPassoComposto(p)) {
+      const valores = estado.valoresCompostos[p.chave] ?? {}
+      for (const campo of CAMPOS_COMPOSTOS[p.fixo as ChaveComposta]) {
+        juntar(titulo, {
+          id: `${p.chave}.${campo.nome}`,
+          rotulo: campo.rotulo,
+          texto: String(valores[campo.nome] ?? ''),
+          chaveDoPasso: p.chave,
+        })
+      }
+      continue
+    }
+
+    if (p.pergunta === undefined && NOME_FIXO[p.fixo ?? ''] === undefined) continue
+
+    juntar(titulo, {
+      id: p.chave,
+      rotulo: rotulo(p),
+      texto: mostrar(p, estado.respostas[p.chave]),
+      chaveDoPasso: p.chave,
+    })
   }
 
   function corrigir(chave: string) {
@@ -80,33 +111,30 @@ export function Revisao({ token, estado }: { token: string; estado: EstadoSerial
     <div className="flex flex-col gap-6">
       <p className="text-lg">Pronto! Confere pra mim antes de fechar.</p>
 
-      {[...grupos.entries()].map(([titulo, passos]) => (
+      {[...grupos.entries()].map(([titulo, linhas]) => (
         <section key={titulo} className="rounded border">
           <h2 className="border-b bg-neutral-50 px-4 py-2 text-sm font-semibold">{titulo}</h2>
           <ul>
-            {passos.map((p) => {
-              const texto = mostrar(p, estado.respostas[p.chave])
-              return (
-                <li
-                  key={p.chave}
-                  className="flex items-center gap-3 border-b px-4 py-2 text-sm last:border-0"
+            {linhas.map((l) => (
+              <li
+                key={l.id}
+                className="flex items-center gap-3 border-b px-4 py-2 text-sm last:border-0"
+              >
+                <span className="w-28 shrink-0 text-neutral-500">{l.rotulo}</span>
+                <span className={`flex-1 ${l.texto ? '' : 'text-neutral-400'}`}>
+                  {l.texto || 'em branco'}
+                </span>
+                <button
+                  type="button"
+                  disabled={ocupado}
+                  onClick={() => corrigir(l.chaveDoPasso)}
+                  aria-label={`Corrigir ${l.rotulo} de ${titulo}`}
+                  className="text-xs underline disabled:opacity-50"
                 >
-                  <span className="w-28 shrink-0 text-neutral-500">{rotulo(p)}</span>
-                  <span className={`flex-1 ${texto ? '' : 'text-neutral-400'}`}>
-                    {texto || 'em branco'}
-                  </span>
-                  <button
-                    type="button"
-                    disabled={ocupado}
-                    onClick={() => corrigir(p.chave)}
-                    aria-label={`Corrigir ${rotulo(p)} de ${titulo}`}
-                    className="text-xs underline disabled:opacity-50"
-                  >
-                    Corrigir
-                  </button>
-                </li>
-              )
-            })}
+                  Corrigir
+                </button>
+              </li>
+            ))}
           </ul>
         </section>
       ))}

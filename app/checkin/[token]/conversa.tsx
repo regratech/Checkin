@@ -3,6 +3,8 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { CampoResposta } from './campo-resposta'
+import { CampoComposto } from './campo-composto'
+import { ehPassoComposto, type ChaveComposta } from '@/lib/composto'
 import { Revisao } from './revisao'
 import { responder } from './acoes'
 import type { EstadoSerializado } from '@/lib/checkin'
@@ -85,7 +87,14 @@ export function Conversa({ token, estado }: { token: string; estado: EstadoSeria
         <>
           <p className="text-lg">{fala}</p>
 
-          {passo.fixo === 'abertura' ? (
+          {ehPassoComposto(passo) ? (
+            <CampoComposto
+              chave={passo.fixo as ChaveComposta}
+              valoresIniciais={estado.valoresCompostos[passo.chave] ?? {}}
+              onResponder={enviar}
+              enviando={enviando}
+            />
+          ) : passo.fixo === 'abertura' ? (
             <button
               type="button"
               disabled={enviando}

@@ -1,6 +1,6 @@
-import { expandirRoteiro, indiceDoPasso, type CampoFixo, type Passo } from '@/lib/roteiro'
-import { validarPorTipo, validarResposta } from '@/lib/validacao'
-import type { Inscricao, Participante, Pergunta, TipoPergunta } from '@/lib/supabase/tipos'
+import { expandirRoteiro, indiceDoPasso, type Passo } from '@/lib/roteiro'
+import { validarResposta } from '@/lib/validacao'
+import type { Inscricao, Participante, Pergunta } from '@/lib/supabase/tipos'
 
 export interface EstadoConversa {
   inscricao: Inscricao
@@ -24,6 +24,36 @@ export interface EstadoSerializado {
   nomeTitular: string
   vagas: number
   concluida: boolean
+  /** Pre-preenchimento dos passos compostos, por chave do passo. */
+  valoresCompostos: Record<string, Record<string, string>>
+}
+
+const COLUNAS_DO_NUCLEO = [
+  "nome",
+  "email",
+  "telefone",
+  "data_nascimento",
+  "nome_cracha",
+] as const
+
+/**
+ * Os campos do nucleo vivem nas colunas de `participantes`, nao na tabela
+ * `respostas`. Sem trazer isso para o mesmo mapa, a revisao final mostrava
+ * "em branco" para dados que estavam gravados — visto no navegador.
+ */
+export function respostasDoNucleo(
+  participantes: Array<Pick<Participante, 'ordem' | (typeof COLUNAS_DO_NUCLEO)[number]>>,
+): Record<string, unknown> {
+  const porChave: Record<string, unknown> = {}
+  for (const p of participantes) {
+    for (const coluna of COLUNAS_DO_NUCLEO) {
+      const valor = p[coluna]
+      if (valor !== null && valor !== undefined && valor !== "") {
+        porChave[`p${p.ordem}.${coluna}`] = valor
+      }
+    }
+  }
+  return porChave
 }
 
 export function chaveDeResposta(passo: Passo): string {
@@ -32,20 +62,6 @@ export function chaveDeResposta(passo: Passo): string {
 
 export function proximoIndice(passos: Passo[], indice: number): number {
   return Math.min(indice + 1, passos.length - 1)
-}
-
-/**
- * Como cada campo do núcleo é validado. Não é configurável: sem nome não
- * sai crachá, e um email torto quebra o contato depois.
- */
-const NUCLEO: Partial<Record<CampoFixo, { tipo: TipoPergunta; obrigatorio: boolean }>> = {
-  nome: { tipo: 'texto_curto', obrigatorio: true },
-  email: { tipo: 'email', obrigatorio: true },
-  // Telefone e aniversário faltaram em vários acompanhantes na planilha
-  // real. Travar a conversa por isso faria o titular abandonar o check-in.
-  telefone: { tipo: 'telefone', obrigatorio: false },
-  data_nascimento: { tipo: 'data', obrigatorio: false },
-  nome_cracha: { tipo: 'texto_curto', obrigatorio: false },
 }
 
 function vazio(valor: unknown): boolean {
@@ -67,17 +83,12 @@ export function podeAvancar(
     return r.ok ? { ok: true } : { ok: false, erro: r.erro }
   }
 
-  const regra = passo.fixo ? NUCLEO[passo.fixo] : undefined
-  // Passos sem regra — abertura, confirmação, buffet, revisão — não pedem
-  // resposta; são conduzidos pela própria tela.
-  if (!regra) return { ok: true }
-
-  if (vazio(valor)) {
-    return regra.obrigatorio ? { ok: false, erro: 'Esse campo é obrigatório.' } : { ok: true }
-  }
-
-  const r = validarPorTipo(regra.tipo, valor)
-  return r.ok ? { ok: true } : { ok: false, erro: r.erro }
+  // Passos fixos não passam por aqui. Os compostos — confirmação do titular,
+  // dados do acompanhante e buffet — têm validação própria em
+  // `validarComposto`, que valida os campos juntos porque a linha em
+  // `participantes` só nasce com nome e email ao mesmo tempo. Abertura e
+  // revisão são conduzidas pela própria tela.
+  return { ok: true }
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -120,7 +131,9 @@ export async function carregarPorToken(
   // devolve zero nesse caso, em vez de travar.
   const indice = inscricao.passo_atual ? indiceDoPasso(passos, inscricao.passo_atual) : 0
 
-  const porChave: Record<string, unknown> = {}
+  const porChave: Record<string, unknown> = respostasDoNucleo(
+    (participantes ?? []) as Participante[],
+  )
   for (const r of (respostas ?? []) as Array<{
     pergunta_id: string
     participante_id: string | null

@@ -5,23 +5,17 @@ import { lerOpcoes, rotuloDaOpcao } from '@/lib/opcoes'
 import type { Passo } from '@/lib/roteiro'
 import type { TipoPergunta } from '@/lib/supabase/tipos'
 
-const TIPO_DO_CAMPO: Record<string, TipoPergunta> = {
-  nome: 'texto_curto',
-  email: 'email',
-  telefone: 'telefone',
-  data_nascimento: 'data',
-  nome_cracha: 'texto_curto',
-}
-
-/** O tipo efetivo do passo: da pergunta, ou do campo do núcleo. */
+/**
+ * Este componente só atende passos de pergunta. Os campos do núcleo agora
+ * vêm em bloco — ver `CampoComposto` — porque a linha em `participantes` só
+ * nasce com nome e email juntos.
+ */
 function tipoDoPasso(passo: Passo): TipoPergunta | null {
-  if (passo.pergunta) return passo.pergunta.tipo
-  return passo.fixo ? (TIPO_DO_CAMPO[passo.fixo] ?? null) : null
+  return passo.pergunta ? passo.pergunta.tipo : null
 }
 
 function ehObrigatorio(passo: Passo): boolean {
-  if (passo.pergunta) return passo.pergunta.obrigatoria
-  return passo.fixo === 'nome' || passo.fixo === 'email'
+  return passo.pergunta ? passo.pergunta.obrigatoria : false
 }
 
 const ATRIBUTO: Partial<Record<TipoPergunta, string>> = {

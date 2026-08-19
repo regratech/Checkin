@@ -25,10 +25,13 @@ const passos = expandirRoteiro([cargo], 2)
 const estado = {
   passos,
   indice: passos.length - 1,
-  respostas: { 'p1.cargo': 'faz_tudo', 'p2.nome': 'Leonardo Guerrieri' },
+  respostas: { 'p1.cargo': 'faz_tudo' },
   nomeTitular: 'Janaína',
   vagas: 2,
   concluida: false,
+  valoresCompostos: {
+    'p2.dados_participante': { nome: 'Leonardo Guerrieri', email: '' },
+  },
 }
 
 describe('Revisao', () => {

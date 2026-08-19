@@ -26,6 +26,7 @@ function estado(indice: number, vagas = 2) {
     nomeTitular: 'Marina',
     vagas,
     concluida: false,
+    valoresCompostos: {},
   }
 }
 
@@ -39,7 +40,7 @@ describe('Conversa', () => {
   it('mostra o contador de pessoa quando o passo e de participante', () => {
     // "pessoa 2 de 2" e o que impede a sensacao de conversa infinita.
     const e = estado(0)
-    const indice = e.passos.findIndex((p) => p.chave === 'p2.nome')
+    const indice = e.passos.findIndex((p) => p.chave === 'p2.dados_participante')
     render(<Conversa token="t" estado={{ ...e, indice }} />)
     expect(screen.getByText(/pessoa 2 de 2/i)).toBeInTheDocument()
   })

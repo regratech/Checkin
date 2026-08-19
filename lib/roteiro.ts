@@ -5,11 +5,7 @@ export type AlvoPasso = { tipo: 'inscricao' } | { tipo: 'participante'; ordem: n
 export type CampoFixo =
   | 'abertura'
   | 'confirmar_titular'
-  | 'nome'
-  | 'email'
-  | 'telefone'
-  | 'data_nascimento'
-  | 'nome_cracha'
+  | 'dados_participante'
   | 'buffet'
   | 'revisao'
 
@@ -25,14 +21,6 @@ export interface Passo {
   titular: boolean
 }
 
-/** Campos que todo participante responde, na ordem em que a Lara pergunta. */
-const CAMPOS_DO_PARTICIPANTE: CampoFixo[] = [
-  'nome',
-  'email',
-  'telefone',
-  'data_nascimento',
-  'nome_cracha',
-]
 
 /**
  * Expande o roteiro único nos passos concretos daquela inscrição.
@@ -68,9 +56,17 @@ export function expandirRoteiro(perguntas: Pergunta[], vagas: number): Passo[] {
         titular,
       })
     } else {
-      for (const campo of CAMPOS_DO_PARTICIPANTE) {
-        passos.push({ chave: `p${ordem}.${campo}`, alvo, fixo: campo, titular })
-      }
+      // Um bloco por pessoa, não cinco perguntas soltas. O motivo é técnico:
+      // a linha em `participantes` só pode nascer com nome E email juntos,
+      // porque `pessoa_id` é obrigatório e a pessoa é resolvida pelo par.
+      // Descoberto no navegador — antes disso o acompanhante era gravado
+      // num update que não acertava linha nenhuma, em silêncio.
+      passos.push({
+        chave: `p${ordem}.dados_participante`,
+        alvo,
+        fixo: 'dados_participante',
+        titular,
+      })
     }
 
     for (const pergunta of doParticipante) {
