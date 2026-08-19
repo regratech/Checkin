@@ -32,6 +32,28 @@ describe('acoes de autenticacao', () => {
     expect(codigo).not.toMatch(/não cadastrado|nao cadastrado|inexistente/i)
   })
 
+  it('registra a causa real no servidor antes de generalizar a mensagem', () => {
+    // A mensagem na tela e generica de proposito. Mas jogar fora a causa
+    // torna a falha indiagnosticavel: senha errada, email nao confirmado,
+    // limite de tentativas e configuracao quebrada viravam a mesma frase, e
+    // um login que nunca funcionou custou minutos de investigacao as cegas.
+    expect(codigo).toMatch(/console\.error\(/)
+    const posLog = codigo.indexOf('console.error(')
+    const posRetorno = codigo.indexOf('Email ou senha incorretos')
+    expect(posLog).toBeGreaterThan(-1)
+    expect(posLog).toBeLessThan(posRetorno)
+  })
+
+  it('nao coloca a senha no log', () => {
+    // O objeto de erro do Supabase e seguro; a senha digitada nao.
+    // O trecho e delimitado a chamada em si — fatiar por numero de
+    // caracteres escorrega para o `return` seguinte, que contem a palavra
+    // "senha" na mensagem da tela e reprovaria codigo correto.
+    const inicio = codigo.indexOf('console.error(')
+    const chamadaLog = codigo.slice(inicio, codigo.indexOf('})', inicio))
+    expect(chamadaLog).not.toMatch(/\bsenha\b|password|analise\.data/i)
+  })
+
   it('nao usa a chave de servico', () => {
     expect(codigo).not.toMatch(/criarClienteAdmin|SERVICE_ROLE/)
   })

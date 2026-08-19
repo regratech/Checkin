@@ -19,9 +19,20 @@ export async function entrar(
     password: analise.data.senha,
   })
 
-  // Mesma mensagem para email inexistente e senha errada: dizer qual dos
-  // dois falhou entrega a um atacante a lista de emails com conta.
-  if (error) return { erro: 'Email ou senha incorretos' }
+  if (error) {
+    // A causa real fica no log do servidor. Sem isto, senha errada, email
+    // nao confirmado, limite de tentativas e configuracao quebrada viram a
+    // mesma frase na tela e a falha fica indiagnosticavel — aconteceu.
+    console.error('[entrar] falha de autenticacao', {
+      codigo: error.code,
+      status: error.status,
+      mensagem: error.message,
+    })
+
+    // Na tela, a mensagem continua generica: dizer qual dos dois falhou
+    // entrega a um atacante a lista de emails com conta.
+    return { erro: 'Email ou senha incorretos' }
+  }
 
   const proximo = form.get('proximo')
   redirect(
