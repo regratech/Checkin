@@ -6,6 +6,10 @@ import { criarClienteRecuperacaoBrowser } from '@/lib/supabase/recuperacao'
 
 export function FormularioNovaSenha() {
   const router = useRouter()
+  // Uma instancia so por aba: dois clientes disputam a mesma chave de
+  // armazenamento e o proprio Supabase avisa que o comportamento fica
+  // indefinido. `useState` com funcao roda uma vez, na montagem.
+  const [supabase] = useState(criarClienteRecuperacaoBrowser)
   const [pronto, setPronto] = useState(false)
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
@@ -14,12 +18,11 @@ export function FormularioNovaSenha() {
   // não envia ao servidor. Só o cliente consegue lê-lo — por isso esta tela
   // é de cliente, e por isso o fluxo é `implicit`.
   useEffect(() => {
-    const supabase = criarClienteRecuperacaoBrowser()
     const { data } = supabase.auth.onAuthStateChange((evento) => {
       if (evento === 'PASSWORD_RECOVERY' || evento === 'SIGNED_IN') setPronto(true)
     })
     return () => data.subscription.unsubscribe()
-  }, [])
+  }, [supabase])
 
   async function trocar(form: FormData) {
     const senha = String(form.get('senha') ?? '')
@@ -31,7 +34,6 @@ export function FormularioNovaSenha() {
     setErro('')
     setSalvando(true)
 
-    const supabase = criarClienteRecuperacaoBrowser()
     const { error } = await supabase.auth.updateUser({ password: senha })
     setSalvando(false)
 

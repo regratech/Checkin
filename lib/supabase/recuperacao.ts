@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import { lerConfigSupabase } from './config'
+import { lerConfigPublica } from './config'
 
 /**
  * Clientes exclusivos do fluxo de recuperação de senha.
@@ -18,7 +18,7 @@ import { lerConfigSupabase } from './config'
  * O projeto Engrenagem já tropeçou nisto — ver o arquivo de mesmo nome lá.
  */
 export function criarClienteRecuperacaoServidor() {
-  const { url, anon } = lerConfigSupabase(process.env)
+  const { url, anon } = lerConfigPublica()
   return createClient(url, anon, {
     auth: {
       flowType: 'implicit',
@@ -31,7 +31,7 @@ export function criarClienteRecuperacaoServidor() {
 }
 
 export function criarClienteRecuperacaoBrowser() {
-  const { url, anon } = lerConfigSupabase(process.env)
+  const { url, anon } = lerConfigPublica()
   return createClient(url, anon, {
     auth: {
       flowType: 'implicit',

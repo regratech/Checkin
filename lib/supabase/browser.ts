@@ -1,7 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr'
-import { lerConfigSupabase } from './config'
+import { lerConfigPublica } from './config'
 
 export function criarClienteBrowser() {
-  const { url, anon } = lerConfigSupabase(process.env)
+  const { url, anon } = lerConfigPublica()
   return createBrowserClient(url, anon)
 }

@@ -22,8 +22,12 @@ describe('clientes de recuperacao de senha', () => {
     expect(codigo).toMatch(/detectSessionInUrl:\s*true/)
   })
 
-  it('valida a configuracao como os demais clientes', () => {
-    expect(codigo).toMatch(/lerConfigSupabase/)
+  it('valida a configuracao pela versao publica', () => {
+    // `lerConfigPublica` le `process.env.NEXT_PUBLIC_X` de forma literal,
+    // que e o que o Next substitui no build. Passar `process.env` inteiro
+    // quebra no navegador — foi o que derrubou a tela /nova-senha.
+    expect(codigo).toMatch(/lerConfigPublica/)
+    expect(codigo).not.toMatch(/lerConfigSupabase\(process\.env\)/)
   })
 
   it('nunca usa a chave de servico', () => {
