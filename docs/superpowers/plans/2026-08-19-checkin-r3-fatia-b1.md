@@ -1822,3 +1822,54 @@ git commit -m "feat: inscricao manual com um bloco por vaga"
 Um admin entra, cria evento, cadastra inscrição com 1 a 6 participantes, e os dados chegam ao banco com identidade resolvida e código `ENG26-0001` gerado pelo Postgres.
 
 **O que ainda não existe:** a tabela geral, as abas `1 · 2 · 3 · 4+`, a busca e o CSV — tudo isso é a Fatia B2. E o roteiro da Lara é a Fatia C.
+
+---
+
+## Decidido durante a execução, para a Fatia B2
+
+**Recuperação de senha entra na B2.** A B1 tem só a tela de entrar; o fluxo de
+redefinir senha não existe. Consequência observada na prática: o link do email
+de recuperação do Supabase leva ao `Site URL` do projeto, que nasce como
+`http://localhost:3000` — e nesta máquina a porta 3000 é o dev server do
+projeto Engrenagem. O email caiu no app errado.
+
+Duas providências:
+
+1. **Configuração** — `Authentication → URL Configuration → Site URL` do projeto
+   `vyjxyczbscdkfhdabrxk` deve apontar para `http://localhost:3100` em
+   desenvolvimento, e para o domínio real em produção.
+2. **Código (Fatia B2)** — construir `/nova-senha`, que recebe o token do
+   fragmento da URL e troca a senha.
+
+Ponto de atenção para quem for implementar: o cliente padrão do `@supabase/ssr`
+fixa `flowType: 'pkce'`, que grava um `code_verifier` no navegador que **pediu**
+a recuperação e exige o mesmo navegador ao abrir o link. O caso comum é o
+oposto — pedir no notebook, abrir no celular —, e aí a troca é recusada com
+"link inválido", indistinguível de link expirado. O projeto Engrenagem já
+tropeçou nisso; a solução lá foi um cliente separado com `flowType: 'implicit'`,
+em `lib/supabase/recuperacao.ts`. Ler aquele arquivo antes de escrever este.
+
+## Desvios registrados na execução da B1 (2026-08-19)
+
+1. **`server-only` derrubava os testes de componente.** Testar um componente de
+   cliente que importa uma Server Action fazia o vitest seguir a cadeia até
+   `lib/supabase/servidor.ts` e estourar. O alias do vitest passou a apontar
+   para o `empty.js` do próprio pacote.
+2. **Dois testes de asserção sobre texto reprovaram código correto.** Um bateu
+   na palavra "inexistente" dentro de um comentário; o outro fatiou 200
+   caracteres e escorregou para dentro do `return`, onde está a palavra "senha".
+   Os dois foram delimitados ao trecho que realmente importa. Lição: teste que
+   lê o fonte como texto precisa remover comentários e delimitar o escopo.
+3. **`console.error` acrescentado em `entrar`.** Todo erro do Supabase virava
+   "Email ou senha incorretos" sem registro nenhum, e um login que nunca
+   funcionou custou minutos de investigação às cegas. A mensagem da tela
+   continua genérica; a causa vai para o log.
+4. **`criarEvento` aceitava só `Promise`.** O construtor de consulta do Supabase
+   é thenable sem `catch`/`finally`. Corrigido para `PromiseLike` antes da B1
+   começar (commit `cddc0b0`).
+
+**Verificação final:** 138 testes em 20 arquivos, `typecheck` limpo, `lint`
+limpo. Caminho real conferido contra o banco de produção: evento criado com
+prefixo derivado, código `VER26-0001` gerado pelo Postgres, Janaína e Leonardo
+sob o mesmo email gerando **duas** pessoas, e o banco recusando ordem duplicada
+e resposta de escopo errado. Dados de teste removidos depois.
