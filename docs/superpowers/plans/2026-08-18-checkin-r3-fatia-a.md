@@ -1671,3 +1671,32 @@ update perfis set papel = 'admin' where email = 'seu@email.com';
 Banco de pé, com as sete tabelas, RLS, código legível e a view. Em TypeScript: identidade resolvida corretamente, evento criado, inscrição manual criada com seus participantes ligados às pessoas certas.
 
 **O que ainda não existe:** telas. Nem admin, nem check-in. É a Fatia B (tabela geral e abas por tamanho de grupo) e a Fatia C (roteiro e chat).
+
+---
+
+## Desvios registrados na execução (2026-08-18)
+
+Quatro pontos em que a execução divergiu do plano, todos verificados:
+
+1. **`_scaffold` → `scaffold`.** O npm recusa nome de pacote começando com
+   underscore. O diretório temporário passou a se chamar `scaffold`.
+2. **`vitest.config.ts` → `vitest.config.mts`.** O Vite avisou que carregar
+   sintaxe ESM como CommonJS deixa de funcionar numa versão maior futura. O
+   `__dirname` virou `import.meta.dirname`.
+3. **O regex de enum do teste de tipos** exigia o enum numa linha só, e
+   `tipo_pergunta` ocupa várias. Corrigido no teste — a formatação da migration
+   não deve ser ditada pelo teste.
+4. **`semAcento` foi extraída para `lib/identidade.ts`** e importada por
+   `lib/eventos.ts`, em vez de o mesmo regex existir duplicado nos dois.
+5. **Script `typecheck` acrescentado.** `app/layout.tsx` usa `LayoutProps<"/">`,
+   um tipo que o Next 16 gera. `tsc --noEmit` sozinho falha com
+   `TS2304: Cannot find name 'LayoutProps'`. A documentação da versão
+   (`03-api-reference/06-cli/next.md`) prescreve `next typegen && tsc --noEmit`,
+   que virou o script. `next-env.d.ts` entrou no `.gitignore`, também por
+   recomendação da mesma página.
+
+**Verificação final:** 79 testes em 8 arquivos, `typecheck` limpo, `lint` limpo,
+árvore de trabalho limpa.
+
+**Pendente:** aplicar as migrations no Supabase (seção acima) e resolver a
+credencial de push do GitHub.
