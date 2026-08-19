@@ -182,3 +182,47 @@ describe('criarInscricaoManual', () => {
     ).rejects.toThrow(/participante/i)
   })
 })
+
+describe('criarInscricaoManual e a mesma pessoa duas vezes', () => {
+  function clienteQueResolveSempreAMesmaPessoa() {
+    const rpc = vi.fn().mockResolvedValue({ data: 'ENG26-0042', error: null })
+    const from = vi.fn(() => ({
+      select: () => ({
+        eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { id: 'pessoa-unica' }, error: null }) }) }),
+      }),
+      insert: () => ({
+        select: () => ({ single: async () => ({ data: { id: 'x' }, error: null }) }),
+      }),
+    }))
+    return { from, rpc } as never
+  }
+
+  it('recusa antes de tocar no banco, dizendo o nome repetido', async () => {
+    // Ninguem se leva a si proprio como acompanhante. Sem esta checagem, o
+    // erro que aparece e o do Postgres — "duplicate key value violates
+    // unique constraint" —, que nao diz QUEM esta repetido.
+    await expect(
+      criarInscricaoManual(clienteQueResolveSempreAMesmaPessoa(), {
+        evento_id: 'ev-1',
+        vagas: 2,
+        participantes: [
+          { nome: 'Regra Tech', email: 'r@t.com' },
+          { nome: 'Regra Tech', email: 'r@t.com' },
+        ],
+      }),
+    ).rejects.toThrow(/Regra Tech/)
+  })
+
+  it('a mensagem explica o que fazer', async () => {
+    await expect(
+      criarInscricaoManual(clienteQueResolveSempreAMesmaPessoa(), {
+        evento_id: 'ev-1',
+        vagas: 2,
+        participantes: [
+          { nome: 'Regra Tech', email: 'r@t.com' },
+          { nome: 'Regra Tech', email: 'r@t.com' },
+        ],
+      }),
+    ).rejects.toThrow(/duas vezes/i)
+  })
+})

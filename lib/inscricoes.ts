@@ -85,6 +85,21 @@ export async function criarInscricaoManual(
     pessoaIds.push(await resolverPessoa(cliente, p.email, p.nome))
   }
 
+  // Ninguem se leva a si proprio como acompanhante. O banco tambem recusa
+  // (migration 006), mas a mensagem crua do Postgres — "duplicate key value
+  // violates unique constraint" — nao diz QUEM esta repetido.
+  const vistos = new Map<string, string>()
+  for (const [i, id] of pessoaIds.entries()) {
+    const anterior = vistos.get(id)
+    if (anterior) {
+      throw new Error(
+        `${anterior} foi cadastrado duas vezes nesta inscrição. ` +
+          'Se são pessoas diferentes, confira o nome e o email de cada uma.',
+      )
+    }
+    vistos.set(id, entrada.participantes[i].nome.trim())
+  }
+
   const { data: inscricao, error: erroInscricao } = await cliente
     .from('inscricoes')
     .insert({
