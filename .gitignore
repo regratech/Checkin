@@ -42,3 +42,6 @@ next-env.d.ts
 
 # o modelo vazio das variaveis fica versionado
 !.env*.example
+
+# gerado por next typegen / next dev
+next-env.d.ts
