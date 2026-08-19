@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { FormularioEntrar } from './formulario-entrar'
 
 export const metadata = { title: 'Entrar · Check-in R3' }
@@ -11,6 +12,9 @@ export default async function PaginaEntrar({ searchParams }: PageProps<'/entrar'
     <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center p-6">
       <h1 className="mb-6 text-2xl font-semibold">Check-in R3</h1>
       <FormularioEntrar proximo={destino} />
+      <Link href="/recuperar-senha" className="mt-6 text-sm underline">
+        Esqueci minha senha
+      </Link>
     </main>
   )
 }

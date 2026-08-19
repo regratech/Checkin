@@ -37,7 +37,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(destino)
   }
 
-  if (user && caminho === '/entrar') {
+  // `/nova-senha` fica de fora de proposito: quem chega pelo link do email
+  // pode ter uma sessao antiga no navegador, e manda-la para /admin
+  // impediria a troca de senha.
+  if (user && (caminho === '/entrar' || caminho === '/recuperar-senha')) {
     const destino = request.nextUrl.clone()
     destino.pathname = '/admin'
     destino.search = ''

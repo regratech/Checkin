@@ -38,3 +38,15 @@ describe('proxy', () => {
     expect(fonte).not.toMatch(/SERVICE_ROLE/)
   })
 })
+
+describe('proxy e a recuperacao de senha', () => {
+  it('nao sequestra /nova-senha de quem ja tem sessao', () => {
+    // Quem chega pelo link do email pode ter sessao antiga no navegador.
+    // Redirecionar para /admin impediria a troca da senha.
+    expect(fonte).not.toMatch(/caminho === '\/nova-senha'/)
+  })
+
+  it('manda quem ja esta logado para longe de /recuperar-senha', () => {
+    expect(fonte).toMatch(/caminho === '\/recuperar-senha'/)
+  })
+})
