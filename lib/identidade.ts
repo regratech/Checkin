@@ -6,18 +6,21 @@
  * seres humanos num registro, e isso nao se desfaz depois. Duplicar por
  * variacao de escrita do nome, sim, se desfaz.
  */
+
+/**
+ * Tira os acentos: `NFD` separa a letra base do acento, e o range
+ * U+0300-U+036F remove os acentos soltos que sobraram.
+ */
+export function semAcento(texto: string): string {
+  return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+}
+
 export function normalizarEmail(bruto: string): string {
   return bruto.trim().toLowerCase()
 }
 
 export function normalizarNome(bruto: string): string {
-  return bruto
-    .normalize('NFD')
-    // U+0300 a U+036F: os acentos que o NFD separou da letra base.
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, ' ')
+  return semAcento(bruto).toLowerCase().trim().replace(/\s+/g, ' ')
 }
 
 export function chaveIdentidade(
