@@ -2,25 +2,23 @@ import 'server-only'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+import { lerConfigSupabase, lerChaveServico } from './config'
 
 export async function criarClienteServidor() {
+  const { url, anon } = lerConfigSupabase(process.env)
   const store = await cookies()
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => store.getAll(),
-        setAll: (lista) => {
-          try {
-            lista.forEach(({ name, value, options }) => store.set(name, value, options))
-          } catch {
-            // chamado de um Server Component: a sessao ja foi renovada antes
-          }
-        },
+  return createServerClient(url, anon, {
+    cookies: {
+      getAll: () => store.getAll(),
+      setAll: (lista) => {
+        try {
+          lista.forEach(({ name, value, options }) => store.set(name, value, options))
+        } catch {
+          // chamado de um Server Component: a sessao ja foi renovada antes
+        }
       },
     },
-  )
+  })
 }
 
 /**
@@ -28,9 +26,8 @@ export async function criarClienteServidor() {
  * NUNCA importar em codigo que roda no navegador.
  */
 export function criarClienteAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { persistSession: false } },
-  )
+  const { url } = lerConfigSupabase(process.env)
+  return createClient(url, lerChaveServico(process.env), {
+    auth: { persistSession: false },
+  })
 }
