@@ -4,8 +4,17 @@
     {
       "name": "checkin",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "3100"],
-      "port": 3100
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "3100"
+      ],
+      "port": 3100,
+      "env": {
+        "NODE_EXTRA_CA_CERTS": "C:/ProgramData/Avast Software/Avast/wscert.pem"
+      }
     }
   ]
 }
