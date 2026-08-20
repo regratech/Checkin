@@ -4,6 +4,11 @@ import { resolve } from 'node:path'
 
 const sql = readFileSync(resolve(__dirname, '../../supabase/migrations/008_guru.sql'), 'utf-8')
 
+// Sem comentários. As asserções negativas falam sobre o que o SQL faz; um
+// comentário explicando por que NÃO se usa algo não pode reprovar o
+// arquivo que o cumpre.
+const comandos = sql.replace(/--.*$/gm, '')
+
 describe('migration 008 - integracao com o guru', () => {
   it('cada evento tem o proprio segredo de webhook', () => {
     // Um segredo global vazaria o acesso a todos os eventos de uma vez.
@@ -17,7 +22,7 @@ describe('migration 008 - integracao com o guru', () => {
   it('nao depende da extensao pgcrypto', () => {
     // `gen_random_bytes` exigiria pgcrypto, que pode nao estar habilitada —
     // e a migration falharia por um detalhe evitavel.
-    expect(sql).not.toMatch(/gen_random_bytes/i)
+    expect(comandos).not.toMatch(/gen_random_bytes/i)
   })
 
   it('guarda o documento da compra, que pode ser CPF ou CNPJ', () => {
