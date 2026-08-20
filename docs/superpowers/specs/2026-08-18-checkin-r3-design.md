@@ -419,3 +419,56 @@ A investigar antes de escrever o plano da Fatia D:
 2. Se for uma automação, ela aceita trocar a URL de destino?
 3. A planilha tem colunas que o Guru manda mas que o Typebot não usa? Elas
    podem ser úteis (valor pago, data da compra, status do pagamento).
+
+---
+
+## Adendo (2026-08-19): o payload real do Guru, decifrado
+
+A planilha `Inscrições ENGRENAGEM 2026` foi lida coluna a coluna. O caminho
+atual é **Guru → webhook n8n → Google Sheets**, com o n8n auto-hospedado em
+`regra3.bravy.com.br`. O nó de destino é um `Append row in sheet` com
+mapeamento manual de colunas.
+
+### As colunas que o Guru entrega
+
+| Coluna | Exemplo | Observação |
+|---|---|---|
+| criado em | `23/06/2026 09:00:37` | quando a compra nasceu |
+| confirmado em | `23/06/2026 09:09:06` | quando o pagamento foi aprovado |
+| nome | `Diogo Rodrigues De Souza` | do comprador |
+| documento | `7937761636` / `46221803000177` | **CPF ou CNPJ** — 11 ou 14 dígitos |
+| email | `pallacebuffetptc@gmail.com` | o `email_compra` do modelo |
+| DDI | `55` | separado do telefone |
+| telefone | `34993395999` | sem DDI |
+| **quantidade** | `2` | **é o `vagas`** — vem como número |
+| status | `A` | aprovado |
+| produto | `Engrenagem … 2026 [PRÉ-VENDA - 2 INSCRIÇÕES] - 15% OFF NA 2ª` | o número se repete no texto |
+
+### O que isso muda no plano da Fatia D
+
+1. **`vagas` não precisa ser extraído do nome do produto.** Existe a coluna
+   numérica `quantidade`. O texto do produto vira conferência, não fonte.
+2. **`documento` aceita CPF e CNPJ.** Modelar como CPF de 11 dígitos estaria
+   errado — a inscrição da Janaína Guerrieri usa CNPJ.
+3. **Não é preciso configurar nada no Guru.** O webhook do n8n já recebe tudo.
+   Basta um nó `HTTP Request` em paralelo ao do Sheets, apontando para o
+   endpoint do sistema. Trocar a URL de destino é a única mudança externa.
+4. **`status = 'A'`** é o filtro: só compra aprovada vira inscrição.
+
+### Confirmação do caso que sustentou o modelo
+
+A linha `Janaína Garcia Guerrieri | laguerryeventos@gmail.com | quantidade 2`
+está na planilha do Guru. É a mesma inscrição cujo acompanhante — Leonardo
+Guerrieri — foi cadastrado com o email dela, e que motivou a chave de
+identidade `email + nome`. O dado de origem confirma a decisão.
+
+### Em aberto, antes de escrever o plano da Fatia D
+
+1. **A planilha continua?** Rodar os dois em paralelo dá rede de segurança no
+   primeiro evento; substituir de uma vez é mais limpo. Decisão do operador.
+2. **O payload tem identificador único da transação?** As colunas da planilha
+   não mostram, mas o webhook recebe mais campos do que os mapeados. Sem um
+   `id`, a idempotência de `sincronizacoes` teria de usar email + carimbo de
+   criação — o que confundiria duas compras do mesmo email no mesmo segundo.
+   Verificar no nó `Webhook` do n8n, em "Listen for test event" ou numa
+   execução antiga.
