@@ -49,6 +49,9 @@ export default async function PaginaEvento({ params }: PageProps<'/admin/[evento
         <Link href={`/admin/${slug}/roteiro`} className="rounded border px-4 py-2">
           Roteiro
         </Link>
+        <Link href={`/admin/${slug}/integracao`} className="rounded border px-4 py-2">
+          Integração
+        </Link>
       </div>
     </div>
   )
