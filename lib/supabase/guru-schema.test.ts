@@ -39,7 +39,9 @@ describe('migration 008 - integracao com o guru', () => {
   it('a mesma chave nao entra duas vezes no mesmo evento', () => {
     // O webhook pode ser reenviado: falha de rede, retentativa do Guru.
     // Sem isto, a mesma compra viraria duas inscricoes.
-    expect(sql).toMatch(/unique.*\(evento_id, chave\)/is)
+    // `[\s\S]` no lugar da flag `s`, que exige alvo ES2018 — o projeto
+    // compila para ES2017.
+    expect(sql).toMatch(/unique[\s\S]*\(evento_id, chave\)/i)
   })
 
   it('a unicidade vale mesmo com chave nula', () => {
